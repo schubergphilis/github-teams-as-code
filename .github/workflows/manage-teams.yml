@@ -2,8 +2,10 @@ name: Manage GitHub Teams
 
 on:
   push:
-    paths:
-      - "team-config.yml" # Trigger only when this file is updated.
+    branches:
+      - '**'
+    #paths:
+    #  - "team-config.yml" # Trigger only when this file is updated.
 
 jobs:
   manage-teams:
