@@ -1,78 +1,74 @@
 name: Manage GitHub Teams
 
 on:
-  #pull_request:
-  #  paths:
-  #    - 'teams/*.yml'
-  #  types:
-  #    - opened
-  #    - edited
   push:
-    branches:
-      - '**'
+    paths:
+      - "team-config.yml" # Trigger only when this file is updated.
 
 jobs:
-  manage_teams:
+  manage-teams:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Set up Python
+      - name: Set Up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: "3.x"
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: pip install PyYAML requests
 
-      - name: Validate and Update Teams
+      - name: Parse YAML and Manage Teams
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TAC }}
+          ORG_NAME: "schubergphilis" # Replace with your org name
         run: |
           python <<EOF
-          import os
           import yaml
           import requests
-          from pathlib import Path
+          import os
 
-          org = "schubergphilis"
-          token = os.getenv("GITHUB_TOKEN")
-          headers = {"Authorization": f"Bearer {token}"}
+          # Load team configuration
+          with open('team-config.yml', 'r') as file:
+              config = yaml.safe_load(file)
 
-          teams_dir = Path("teams")
-          changed_files = os.getenv("CHANGED_FILES", "").splitlines()
+          org_name = os.getenv('ORG_NAME')
+          token = os.getenv('GITHUB_TOKEN')
+          headers = {
+              'Authorization': f'Bearer {token}',
+              'Accept': 'application/vnd.github.v3+json'
+          }
 
-          for file in changed_files:
-              if file.startswith("teams/") and file.endswith(".yml"):
-                  team_name = Path(file).stem  # Extract team name from filename
-                  with open(file, 'r') as f:
-                      team_data = yaml.safe_load(f)
+          def create_team(team_name, description):
+              url = f"https://api.github.com/orgs/{org_name}/teams"
+              payload = {"name": team_name, "description": description, "privacy": "closed"}
+              response = requests.post(url, json=payload, headers=headers)
+              if response.status_code in [200, 201]:
+                  print(f"Team '{team_name}' created or already exists.")
+              else:
+                  print(f"Failed to create team '{team_name}': {response.json()}")
 
-                  members = team_data.get("members", [])
-                  
-                  # Get or create team
-                  team_url = f"https://api.github.com/orgs/{org}/teams/{team_name}"
-                  team_response = requests.get(team_url, headers=headers)
+          def add_member_to_team(team_slug, username):
+              url = f"https://api.github.com/orgs/{org_name}/teams/{team_slug}/memberships/{username}"
+              response = requests.put(url, headers=headers)
+              if response.status_code in [200, 201]:
+                  print(f"User '{username}' added to team '{team_slug}'.")
+              else:
+                  print(f"Failed to add user '{username}' to team '{team_slug}': {response.json()}")
 
-                  if team_response.status_code == 404:
-                      # Create the team if it doesn't exist
-                      create_team_response = requests.post(
-                          f"https://api.github.com/orgs/{org}/teams",
-                          json={"name": team_name},
-                          headers=headers,
-                      )
-                      create_team_response.raise_for_status()
+          # Process each team and its members
+          for team in config.get('teams', []):
+              team_name = team['name']
+              description = team.get('description', '')
+              members = team.get('members', [])
 
-                  # Sync team members
-                  for member in members:
-                      add_member_url = f"https://api.github.com/orgs/{org}/teams/{team_name}/memberships/{member}"
-                      response = requests.put(add_member_url, headers=headers)
-                      response.raise_for_status()
+              # Create the team
+              create_team(team_name, description)
+
+              # Add members to the team
+              for member in members:
+                  add_member_to_team(team_name, member)
           EOF
-
-      - name: Get Changed Files
-        id: get_changed_files
-        run: |
-          echo "CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)" >> $GITHUB_ENV

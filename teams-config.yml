@@ -1,0 +1,11 @@
+teams:
+  - name: "teams-as-code01"
+    description: "Team as Code 01"
+    members:
+      - "neleshgoel"
+      - "sdevriessbp"
+  - name: "teams-as-code02"
+    description: "Team as Code 02"
+    members:
+      - "neleshgoel"
+      - "sdevriessbp"
