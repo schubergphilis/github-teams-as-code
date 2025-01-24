@@ -34,7 +34,7 @@ jobs:
           import os
 
           # Load team configuration
-          with open('team-config.yml', 'r') as file:
+          with open('config/teams-config.yml', 'r') as file:
               config = yaml.safe_load(file)
 
           org_name = os.getenv('ORG_NAME')
