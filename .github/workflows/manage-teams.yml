@@ -26,7 +26,7 @@ jobs:
       - name: Parse YAML and Manage Teams
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TAC }}
-          ORG_NAME: "schubergphilis" # Replace with your org name
+          ORG_NAME: "neleshgoel84" # Replace with your org name
         run: |
           python <<EOF
           import yaml
